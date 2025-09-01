@@ -148,7 +148,7 @@ export default function Home() {
         <p style={{ color: '#a0a0a0', marginTop: 0, marginBottom: '1rem' }}>
           調査したいトランザクションハッシュを入力してください。
         </p>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <input
             type="text"
             value={inputHash}
