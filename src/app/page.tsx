@@ -97,6 +97,7 @@ export default function Home() {
           setNodes(newNodes);
           setEdges(newEdges);
         }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         console.error("データ取得エラー:", err);
         if (err.name === 'TransactionNotFoundError') {
