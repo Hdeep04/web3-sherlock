@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import ReactFlow, { MiniMap, Controls, Background, Node, Edge, useReactFlow } from 'reactflow';
+import ReactFlow, { MiniMap, Controls, Background, Node, Edge, useReactFlow, BackgroundVariant } from 'reactflow';
 import 'reactflow/dist/style.css';
 
 type FlowChartProps = {
@@ -22,7 +22,7 @@ function FlowContent({ nodes, edges }: FlowChartProps) {
     <>
       <MiniMap />
       <Controls />
-      <Background variant="dots" gap={12} size={1} />
+      <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
     </>
   );
 }

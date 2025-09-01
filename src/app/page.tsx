@@ -97,10 +97,9 @@ export default function Home() {
           setNodes(newNodes);
           setEdges(newEdges);
         }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (err: any) {
+      } catch (err: unknown) { // anyをunknownに変更し、型ガードを行う
         console.error("データ取得エラー:", err);
-        if (err.name === 'TransactionNotFoundError') {
+        if (err instanceof Error && 'name' in err && err.name === 'TransactionNotFoundError') {
           setError(`トランザクションが見つかりませんでした。`);
         } else {
           setError("予期せぬエラーが発生しました。");
