@@ -31,7 +31,7 @@ export default function FlowChart({ nodes, edges }: FlowChartProps) {
   if (nodes.length === 0) {
     return (
       <div style={{ padding: '2rem', color: '#a0a0a0', textAlign: 'center', border: '1px dashed #444', borderRadius: '8px' }}>
-        分析するトランザクションを入力してください。
+        トランザクションを分析すると、ここに関係図が表示されます。
       </div>
     );
   }
