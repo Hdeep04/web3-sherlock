@@ -72,32 +72,70 @@ export default function Home() {
             effectiveGasPrice: receipt.effectiveGasPrice
           });
 
+          // --- グラフデータへの変換ロジック ---
           const newNodes: Node[] = [];
           const newEdges: Edge[] = [];
           const addressMap = new Map<string, boolean>();
 
-          newNodes.push({ id: receipt.from, position: { x: 50, y: 200 }, data: { label: `From: ${receipt.from.slice(0, 6)}...${receipt.from.slice(-4)}` }, style: { backgroundColor: '#50e3c2', color: 'black' } });
-          addressMap.set(receipt.from, true);
+          // Step 1: イベントログの発生回数を集計する
+          const logCounts = new Map<string, number>();
+          receipt.logs.forEach(log => {
+            const count = logCounts.get(log.address.toLowerCase()) || 0;
+            logCounts.set(log.address.toLowerCase(), count + 1);
+          });
+
+          // Step 2: ノードを作成する
+          const fromAddress = receipt.from.toLowerCase();
+          newNodes.push({ id: fromAddress, position: { x: 50, y: 200 }, data: { label: `From: ${receipt.from.slice(0, 6)}...${receipt.from.slice(-4)}` }, style: { backgroundColor: '#50e3c2', color: 'black' } });
+          addressMap.set(fromAddress, true);
 
           if (receipt.to) {
-            newNodes.push({ id: receipt.to, position: { x: 300, y: 200 }, data: { label: `To: ${receipt.to.slice(0, 6)}...${receipt.to.slice(-4)}` } });
-            addressMap.set(receipt.to, true);
-            newEdges.push({ id: `e-${receipt.from}-${receipt.to}`, source: receipt.from, target: receipt.to, animated: true, style: { strokeWidth: 2 }, label: `${formatEther(transaction.value)} ETH` });
+            const toAddress = receipt.to.toLowerCase();
+            const count = logCounts.get(toAddress) || 0;
+            const nodeWidth = 150 + count * 5;
+            const nodeHeight = 60 + count * 2;
+            
+            newNodes.push({ 
+              id: toAddress, 
+              position: { x: 300, y: 200 }, 
+              data: { label: `To: ${receipt.to.slice(0, 6)}...${receipt.to.slice(-4)}\nEvents: ${count}` },
+              style: count > 0 ? { backgroundColor: '#f5a623', color: 'black', width: `${nodeWidth}px`, height: `${nodeHeight}px`, textAlign: 'center' } : {}
+            });
+            addressMap.set(toAddress, true);
           }
 
-          receipt.logs.forEach((log, index) => {
-            if (!addressMap.has(log.address)) {
-              newNodes.push({ id: log.address, position: { x: 550, y: 100 + index * 100 }, data: { label: `Contract: ${log.address.slice(0, 6)}...${log.address.slice(-4)}` }, style: { backgroundColor: '#f5a623', color: 'black' } });
-              addressMap.set(log.address, true);
-            }
-            if (receipt.to) {
-              newEdges.push({ id: `e-log-${receipt.to}-${log.address}-${index}`, source: receipt.to, target: log.address, label: `Event #${index + 1}` });
+          const uniqueLogAddresses = [...new Set(receipt.logs.map(l => l.address.toLowerCase()))];
+          uniqueLogAddresses.forEach((logAddress, index) => {
+            if (!addressMap.has(logAddress)) {
+              const count = logCounts.get(logAddress) || 0;
+              const nodeWidth = 150 + count * 5;
+              const nodeHeight = 60 + count * 2;
+
+              newNodes.push({
+                id: logAddress,
+                position: { x: 550, y: 50 + index * 120 },
+                data: { label: `Contract: ${logAddress.slice(0, 6)}...${logAddress.slice(-4)}\nEvents: ${count}` },
+                style: { backgroundColor: '#f5a623', color: 'black', width: `${nodeWidth}px`, height: `${nodeHeight}px`, textAlign: 'center' }
+              });
+              addressMap.set(logAddress, true);
             }
           });
+          
+          // Step 3: エッジを作成する
+          if (receipt.to) {
+            newEdges.push({ id: `e-${receipt.from}-${receipt.to}`, source: receipt.from.toLowerCase(), target: receipt.to.toLowerCase(), animated: true, style: { strokeWidth: 2 }, label: `${formatEther(transaction.value)} ETH` });
+          
+            uniqueLogAddresses.forEach(logAddress => {
+              if (logAddress !== receipt.to?.toLowerCase()) {
+                 newEdges.push({ id: `e-main-${receipt.to}-${logAddress}`, source: receipt.to!.toLowerCase(), target: logAddress });
+              }
+            });
+          }
+
           setNodes(newNodes);
           setEdges(newEdges);
         }
-      } catch (err: unknown) { // anyをunknownに変更し、型ガードを行う
+      } catch (err: unknown) {
         console.error("データ取得エラー:", err);
         if (err instanceof Error && 'name' in err && err.name === 'TransactionNotFoundError') {
           setError(`トランザクションが見つかりませんでした。`);
@@ -154,21 +192,23 @@ export default function Home() {
             value={inputHash}
             onChange={(e) => setInputHash(e.target.value)}
             placeholder="例: 0x9a8069502281a1a9a854224c328ed338..."
-            style={{ width: '100%', padding: '0.8rem', backgroundColor: '#1a1a1a', border: error ? '1px solid #e67e22' : '1px solid #444', borderRadius: '4px', color: '#e0e0e0', fontSize: '1em' }}
+            style={{ flexGrow: 1, minWidth: '300px', padding: '0.8rem', backgroundColor: '#1a1a1a', border: error ? '1px solid #e67e22' : '1px solid #444', borderRadius: '4px', color: '#e0e0e0', fontSize: '1em' }}
           />
-          <button
-            onClick={handleAnalyse}
-            disabled={isLoading || !inputHash}
-            style={{ padding: '0.8rem 1.5rem', backgroundColor: (isLoading || !inputHash) ? '#555' : '#4a90e2', color: 'white', border: 'none', borderRadius: '4px', cursor: (isLoading || !inputHash) ? 'not-allowed' : 'pointer', fontSize: '1em', whiteSpace: 'nowrap', transition: 'background-color 0.2s' }}
-          >
-            {isLoading ? '分析中...' : '分析する'}
-          </button>
-          <button
-            onClick={handleReset}
-            style={{ padding: '0.8rem 1.5rem', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '1em', whiteSpace: 'nowrap', transition: 'background-color 0.2s' }}
-          >
-            リセット
-          </button>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <button
+              onClick={handleAnalyse}
+              disabled={isLoading || !inputHash}
+              style={{ padding: '0.8rem 1.5rem', backgroundColor: (isLoading || !inputHash) ? '#555' : '#4a90e2', color: 'white', border: 'none', borderRadius: '4px', cursor: (isLoading || !inputHash) ? 'not-allowed' : 'pointer', fontSize: '1em', whiteSpace: 'nowrap', transition: 'background-color 0.2s' }}
+            >
+              {isLoading ? '分析中...' : '分析する'}
+            </button>
+            <button
+              onClick={handleReset}
+              style={{ padding: '0.8rem 1.5rem', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '1em', whiteSpace: 'nowrap', transition: 'background-color 0.2s' }}
+            >
+              リセット
+            </button>
+          </div>
         </div>
       </section>
 
@@ -180,7 +220,7 @@ export default function Home() {
           {isLoading && <p>トランザクションデータを取得中...</p>}
           {error && ( <div style={{ color: '#e67e22', padding: '1rem', border: '1px solid #e67e22', borderRadius: '4px' }}><p><strong>エラー</strong></p><p>{error}</p></div> )}
           {!isLoading && !error && txInfo && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
               <div><p style={{ color: '#a0a0a0', margin: 0 }}>ブロック番号:</p><p style={{ fontSize: '1.2em', margin: '0.2rem 0', color: 'white' }}><strong>{txInfo.blockNumber.toString()}</strong></p></div>
               <div><p style={{ color: '#a0a0a0', margin: 0 }}>送信元アドレス:</p><p style={{ fontSize: '1.2em', margin: '0.2rem 0', wordWrap: 'break-word', color: '#50e3c2' }}><strong>{txInfo.from}</strong></p></div>
               <div><p style={{ color: '#a0a0a0', margin: 0 }}>送信先アドレス:</p><p style={{ fontSize: '1.2em', margin: '0.2rem 0', wordWrap: 'break-word', color: '#f5a623' }}><strong>{txInfo.to || 'N/A (Contract Creation)'}</strong></p></div>
