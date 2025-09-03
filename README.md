@@ -25,10 +25,10 @@ Vibe Coding Mini Hackathon 提出作品
 - **レスポンシブ対応:** PCでも、スマートフォンでも、快適に利用できます。
 
 *(PCでの表示例)*
-![PC Screenshot](ここに、PC版のスクリーンショット画像のパスを入れます)
+![PC Screenshot](/pc-demo.png)
 
 *(スマートフォンでの表示例)*
-![Mobile Screenshot](ここに、スマホ版のスクリーンショット画像のパスを入れます)
+![Mobile Screenshot](/mobile-demo.jpeg)
 
 
 ## 3. 技術スタック
